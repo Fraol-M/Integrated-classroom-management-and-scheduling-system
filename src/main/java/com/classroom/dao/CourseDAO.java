@@ -164,4 +164,30 @@ public class CourseDAO {
         course.setCreditHours(rs.getInt("credit_hours"));
         return course;
     }
+
+    /**
+     * Get teacher ID by course code.
+     */
+    public static int getTeacherIdByCourseCode(String courseCode) {
+        String sql = "SELECT t.user_id FROM Users t " +
+                     "JOIN TeacherCourses tc ON t.user_id = tc.teacher_id " +
+                     "JOIN Courses c ON tc.course_id = c.course_id " +
+                     "WHERE c.course_code = ?";
+
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, courseCode);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("user_id");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return -1; // Return -1 if no teacher found
+    }
 }

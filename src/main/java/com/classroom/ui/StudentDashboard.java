@@ -65,379 +65,445 @@ public class StudentDashboard extends JFrame {
         tabbedPane.addTab("My Courses", new ImageIcon(), new JScrollPane(coursesPanel), "View your enrolled courses");
         tabbedPane.addTab("Profile", new ImageIcon(), new JScrollPane(profilePanel), "View and edit your profile");
 
-        // Add components to main panel
-        mainPanel.add(headerPanel, BorderLayout.NORTH);
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-
-        // Set content pane
-        setContentPane(mainPanel);
-    }
-
-    private JPanel createHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(ColorScheme.PRIMARY);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-
-        JLabel titleLabel = new JLabel("Classroom Management System");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        titleLabel.setForeground(Color.WHITE);
-
-        JPanel userInfoPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        userInfoPanel.setOpaque(false);
-
-        // Add room information
-        roomLabel = new JLabel();
-        roomLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        roomLabel.setForeground(Color.WHITE);
-        updateRoomLabel();
-
-        JLabel userLabel = new JLabel(currentUser.getFullName() + " (" + currentUser.getProgramType() + " Student)");
-        userLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        userLabel.setForeground(Color.WHITE);
-
-        JButton logoutButton = new JButton("Logout");
-        UIUtils.styleButton(logoutButton, Color.WHITE);
-        logoutButton.setForeground(ColorScheme.PRIMARY);
-        logoutButton.addActionListener(e -> logout());
-
-        userInfoPanel.add(roomLabel);
-        userInfoPanel.add(Box.createHorizontalStrut(20));
-        userInfoPanel.add(userLabel);
-        userInfoPanel.add(Box.createHorizontalStrut(10));
-        userInfoPanel.add(logoutButton);
-
-        headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(userInfoPanel, BorderLayout.EAST);
-
-        return headerPanel;
-    }
-
-    private JPanel createCoursesPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        // Create header panel with title and enroll button
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(Color.WHITE);
-
-        JLabel titleLabel = new JLabel("My Courses");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        titleLabel.setForeground(ColorScheme.PRIMARY);
-
-        JButton enrollButton = new JButton("Enroll in Courses");
-        UIUtils.styleButton(enrollButton, ColorScheme.PRIMARY);
-        enrollButton.addActionListener(e -> showEnrollmentDialog());
-
-        headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(enrollButton, BorderLayout.EAST);
-
-        List<Course> courses = CourseDAO.getCoursesByStudentId(currentUser.getUserId());
-
-        JPanel coursesListPanel = new JPanel();
-        coursesListPanel.setLayout(new BoxLayout(coursesListPanel, BoxLayout.Y_AXIS));
-        coursesListPanel.setBackground(Color.WHITE);
-
-        if (courses.isEmpty()) {
-            JLabel noCoursesLabel = new JLabel("You are not enrolled in any courses yet.");
-            noCoursesLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-            noCoursesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-            coursesListPanel.add(noCoursesLabel);
-        } else {
-            for (Course course : courses) {
-                JPanel courseCard = createCourseCard(course);
-                coursesListPanel.add(courseCard);
-                coursesListPanel.add(Box.createVerticalStrut(10));
+        // Add to the initComponents method after existing tabs
+        JPanel makeupRequestPanel = createMakeupRequestPanel();
+        tabbedPane.addTab("Makeup Request", new ImageIcon(), new JScrollPane(makeupRequestPanel), "Submit makeup class request");
+        
+        // Add this new method
+        private JPanel createMakeupRequestPanel() {
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBackground(Color.WHITE);
+            panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+            // Header
+            JLabel titleLabel = new JLabel("Submit Makeup Class Request");
+            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            titleLabel.setForeground(ColorScheme.PRIMARY);
+        
+            // Form Panel
+            JPanel formPanel = new JPanel(new GridBagLayout());
+            formPanel.setBackground(Color.WHITE);
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.anchor = GridBagConstraints.WEST;
+            gbc.insets = new Insets(5, 5, 5, 5);
+        
+            // Section Field (auto-populated)
+            JLabel sectionLabel = new JLabel("Section:");
+            JTextField sectionField = new JTextField(20);
+            sectionField.setEditable(false);
+            if (currentUser.getAssignedRoom() != null && !currentUser.getAssignedRoom().isEmpty()) {
+                sectionField.setText(currentUser.getAssignedRoom());
+            } else {
+                sectionField.setText("Please join a room or ask coordinator");
+                sectionField.setForeground(Color.RED);
             }
+        
+            // Course Selection
+            JLabel courseLabel = new JLabel("Course:");
+            JComboBox<String> courseCombo = new JComboBox<>();
+            List<Course> enrolledCourses = CourseDAO.getCoursesByStudentId(currentUser.getUserId());
+            for (Course course : enrolledCourses) {
+                courseCombo.addItem(course.getCourseCode());
+            }
+        
+            // Class Representative Checkbox
+            JCheckBox classRepCheckBox = new JCheckBox("I am the class representative");
+        
+            // Submit Button
+            JButton submitButton = new JButton("Submit Request");
+            UIUtils.styleButton(submitButton, ColorScheme.PRIMARY);
+            submitButton.addActionListener(e -> {
+                if (!classRepCheckBox.isSelected()) {
+                    JOptionPane.showMessageDialog(this,
+                        "Only class representatives can submit makeup requests",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+        
+                if (currentUser.getAssignedRoom() == null || currentUser.getAssignedRoom().isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                        "Please join a room or contact coordinator first",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+        
+                String selectedCourse = (String) courseCombo.getSelectedItem();
+                // Get teacher ID for the selected course
+                int teacherId = CourseDAO.getTeacherIdByCourseCode(selectedCourse);
+        
+                MakeupRequest request = new MakeupRequest(
+                    currentUser.getUserId(),
+                    selectedCourse,
+                    currentUser.getAssignedRoom(),
+                    teacherId,
+                    true
+                );
+        
+                if (MakeupRequestDAO.createRequest(request)) {
+                    JOptionPane.showMessageDialog(this,
+                        "Makeup request submitted successfully",
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                        "Failed to submit makeup request",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+        
+            // Add components to form panel
+            formPanel.add(sectionLabel, gbc);
+            gbc.gridx = 1;
+            formPanel.add(sectionField, gbc);
+        
+            gbc.gridx = 0;
+            gbc.gridy++;
+            formPanel.add(courseLabel, gbc);
+            gbc.gridx = 1;
+            formPanel.add(courseCombo, gbc);
+        
+            gbc.gridx = 0;
+            gbc.gridy++;
+            gbc.gridwidth = 2;
+            formPanel.add(classRepCheckBox, gbc);
+        
+            gbc.gridy++;
+            formPanel.add(submitButton, gbc);
+        
+            // Add components to main panel
+            panel.add(titleLabel, BorderLayout.NORTH);
+            panel.add(formPanel, BorderLayout.CENTER);
+        
+            return panel;
         }
 
-        panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(coursesListPanel), BorderLayout.CENTER);
+        private JPanel createCoursesPanel() {
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBackground(Color.WHITE);
+            panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        return panel;
-    }
+            // Create header panel with title and enroll button
+            JPanel headerPanel = new JPanel(new BorderLayout());
+            headerPanel.setBackground(Color.WHITE);
 
-    private void showEnrollmentDialog() {
-        JDialog dialog = new JDialog(this, "Available Courses", true);
-        dialog.setLayout(new BorderLayout());
-        dialog.setSize(600, 400);
-        dialog.setLocationRelativeTo(this);
+            JLabel titleLabel = new JLabel("My Courses");
+            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            titleLabel.setForeground(ColorScheme.PRIMARY);
 
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            JButton enrollButton = new JButton("Enroll in Courses");
+            UIUtils.styleButton(enrollButton, ColorScheme.PRIMARY);
+            enrollButton.addActionListener(e -> showEnrollmentDialog());
 
-        List<Course> allCourses = CourseDAO.getAllCourses();
-        for (Course course : allCourses) {
-            if (!EnrollmentDAO.isStudentEnrolled(currentUser.getUserId(), course.getCourseId())) {
-                JPanel coursePanel = new JPanel(new BorderLayout());
-                coursePanel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ColorScheme.LIGHT_ACCENT),
-                        BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+            headerPanel.add(titleLabel, BorderLayout.WEST);
+            headerPanel.add(enrollButton, BorderLayout.EAST);
 
-                JPanel infoPanel = new JPanel(new GridLayout(2, 1));
-                infoPanel.add(new JLabel(course.getCourseCode() + " - " + course.getCourseName()));
-                infoPanel.add(new JLabel(course.getDescription()));
+            List<Course> courses = CourseDAO.getCoursesByStudentId(currentUser.getUserId());
 
-                JButton enrollButton = new JButton("Enroll");
-                UIUtils.styleButton(enrollButton, ColorScheme.PRIMARY);
-                enrollButton.addActionListener(e -> {
-                    if (EnrollmentDAO.enrollStudent(currentUser.getUserId(), course.getCourseId())) {
-                        JOptionPane.showMessageDialog(dialog,
-                                "Successfully enrolled in " + course.getCourseName(),
-                                "Success", JOptionPane.INFORMATION_MESSAGE);
-                        dialog.dispose();
-                        refreshCoursesPanel();
-                    } else {
-                        JOptionPane.showMessageDialog(dialog,
-                                "Failed to enroll in the course",
-                                "Error", JOptionPane.ERROR_MESSAGE);
-                    }
-                });
+            JPanel coursesListPanel = new JPanel();
+            coursesListPanel.setLayout(new BoxLayout(coursesListPanel, BoxLayout.Y_AXIS));
+            coursesListPanel.setBackground(Color.WHITE);
 
-                coursePanel.add(infoPanel, BorderLayout.CENTER);
-                coursePanel.add(enrollButton, BorderLayout.EAST);
-                contentPanel.add(coursePanel);
-                contentPanel.add(Box.createVerticalStrut(10));
-            }
-        }
-
-        JScrollPane scrollPane = new JScrollPane(contentPanel);
-        dialog.add(scrollPane, BorderLayout.CENTER);
-        dialog.setVisible(true);
-    }
-
-    private void refreshCoursesPanel() {
-        List<Course> availableCourses = new ArrayList<>();
-
-        try (Connection conn = DatabaseUtil.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("SELECT assigned_room FROM Users WHERE user_id = ?")) {
-            stmt.setInt(1, currentUser.getUserId());
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                String assignedRoom = rs.getString("assigned_room");
-                if (assignedRoom != null) {
-                    availableCourses = CourseDAO.getCoursesByRoom(assignedRoom);
+            if (courses.isEmpty()) {
+                JLabel noCoursesLabel = new JLabel("You are not enrolled in any courses yet.");
+                noCoursesLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+                noCoursesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                coursesListPanel.add(noCoursesLabel);
+            } else {
+                for (Course course : courses) {
+                    JPanel courseCard = createCourseCard(course);
+                    coursesListPanel.add(courseCard);
+                    coursesListPanel.add(Box.createVerticalStrut(10));
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+
+            panel.add(headerPanel, BorderLayout.NORTH);
+            panel.add(new JScrollPane(coursesListPanel), BorderLayout.CENTER);
+
+            return panel;
         }
 
-        coursesPanel.removeAll();
-        for (Course course : availableCourses) {
-            coursesPanel.add(createCourseCard(course));
+        private void showEnrollmentDialog() {
+            JDialog dialog = new JDialog(this, "Available Courses", true);
+            dialog.setLayout(new BorderLayout());
+            dialog.setSize(600, 400);
+            dialog.setLocationRelativeTo(this);
+
+            JPanel contentPanel = new JPanel();
+            contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+            contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+            List<Course> allCourses = CourseDAO.getAllCourses();
+            for (Course course : allCourses) {
+                if (!EnrollmentDAO.isStudentEnrolled(currentUser.getUserId(), course.getCourseId())) {
+                    JPanel coursePanel = new JPanel(new BorderLayout());
+                    coursePanel.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(ColorScheme.LIGHT_ACCENT),
+                            BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+
+                    JPanel infoPanel = new JPanel(new GridLayout(2, 1));
+                    infoPanel.add(new JLabel(course.getCourseCode() + " - " + course.getCourseName()));
+                    infoPanel.add(new JLabel(course.getDescription()));
+
+                    JButton enrollButton = new JButton("Enroll");
+                    UIUtils.styleButton(enrollButton, ColorScheme.PRIMARY);
+                    enrollButton.addActionListener(e -> {
+                        if (EnrollmentDAO.enrollStudent(currentUser.getUserId(), course.getCourseId())) {
+                            JOptionPane.showMessageDialog(dialog,
+                                    "Successfully enrolled in " + course.getCourseName(),
+                                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                            dialog.dispose();
+                            refreshCoursesPanel();
+                        } else {
+                            JOptionPane.showMessageDialog(dialog,
+                                    "Failed to enroll in the course",
+                                    "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+
+                    coursePanel.add(infoPanel, BorderLayout.CENTER);
+                    coursePanel.add(enrollButton, BorderLayout.EAST);
+                    contentPanel.add(coursePanel);
+                    contentPanel.add(Box.createVerticalStrut(10));
+                }
+            }
+
+            JScrollPane scrollPane = new JScrollPane(contentPanel);
+            dialog.add(scrollPane, BorderLayout.CENTER);
+            dialog.setVisible(true);
         }
-        coursesPanel.revalidate();
-        coursesPanel.repaint();
-    }
 
-    private JPanel createCourseCard(Course course) {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColorScheme.LIGHT_ACCENT, 1),
-                BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        private void refreshCoursesPanel() {
+            List<Course> availableCourses = new ArrayList<>();
 
-        JLabel codeLabel = new JLabel(course.getCourseCode());
-        codeLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        codeLabel.setForeground(ColorScheme.PRIMARY);
+            try (Connection conn = DatabaseUtil.getConnection();
+                    PreparedStatement stmt = conn.prepareStatement("SELECT assigned_room FROM Users WHERE user_id = ?")) {
+                stmt.setInt(1, currentUser.getUserId());
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    String assignedRoom = rs.getString("assigned_room");
+                    if (assignedRoom != null) {
+                        availableCourses = CourseDAO.getCoursesByRoom(assignedRoom);
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
 
-        JLabel nameLabel = new JLabel(course.getCourseName());
-        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            coursesPanel.removeAll();
+            for (Course course : availableCourses) {
+                coursesPanel.add(createCourseCard(course));
+            }
+            coursesPanel.revalidate();
+            coursesPanel.repaint();
+        }
 
-        JLabel descLabel = new JLabel(course.getDescription());
-        descLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-        descLabel.setForeground(Color.DARK_GRAY);
+        private JPanel createCourseCard(Course course) {
+            JPanel card = new JPanel(new BorderLayout());
+            card.setBackground(Color.WHITE);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ColorScheme.LIGHT_ACCENT, 1),
+                    BorderFactory.createEmptyBorder(15, 15, 15, 15)));
 
-        JPanel infoPanel = new JPanel(new GridLayout(3, 1, 5, 5));
-        infoPanel.setOpaque(false);
-        infoPanel.add(codeLabel);
-        infoPanel.add(nameLabel);
-        infoPanel.add(descLabel);
+            JLabel codeLabel = new JLabel(course.getCourseCode());
+            codeLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            codeLabel.setForeground(ColorScheme.PRIMARY);
 
-        card.add(infoPanel, BorderLayout.CENTER);
+            JLabel nameLabel = new JLabel(course.getCourseName());
+            nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
 
-        return card;
-    }
+            JLabel descLabel = new JLabel(course.getDescription());
+            descLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            descLabel.setForeground(Color.DARK_GRAY);
 
-    private JPanel createProfilePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            JPanel infoPanel = new JPanel(new GridLayout(3, 1, 5, 5));
+            infoPanel.setOpaque(false);
+            infoPanel.add(codeLabel);
+            infoPanel.add(nameLabel);
+            infoPanel.add(descLabel);
 
-        JLabel titleLabel = new JLabel("My Profile");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        titleLabel.setForeground(ColorScheme.PRIMARY);
+            card.add(infoPanel, BorderLayout.CENTER);
 
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(Color.WHITE);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.anchor = GridBagConstraints.WEST;
+            return card;
+        }
 
-        // User information fields
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        JLabel userInfoLabel = new JLabel("User Information");
-        userInfoLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        formPanel.add(userInfoLabel, gbc);
+        private JPanel createProfilePanel() {
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBackground(Color.WHITE);
+            panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Username
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 1;
-        JLabel usernameLabel = new JLabel("Username:");
-        formPanel.add(usernameLabel, gbc);
+            JLabel titleLabel = new JLabel("My Profile");
+            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            titleLabel.setForeground(ColorScheme.PRIMARY);
 
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        JLabel usernameValue = new JLabel(currentUser.getUsername());
-        usernameValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        formPanel.add(usernameValue, gbc);
+            JPanel formPanel = new JPanel(new GridBagLayout());
+            formPanel.setBackground(Color.WHITE);
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.insets = new Insets(8, 8, 8, 8);
+            gbc.anchor = GridBagConstraints.WEST;
 
-        // Full Name
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        JLabel nameLabel = new JLabel("Full Name:");
-        formPanel.add(nameLabel, gbc);
+            // User information fields
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.gridwidth = 2;
+            JLabel userInfoLabel = new JLabel("User Information");
+            userInfoLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            formPanel.add(userInfoLabel, gbc);
 
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        JLabel nameValue = new JLabel(currentUser.getFullName());
-        nameValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        formPanel.add(nameValue, gbc);
+            // Username
+            gbc.gridx = 0;
+            gbc.gridy = 1;
+            gbc.gridwidth = 1;
+            JLabel usernameLabel = new JLabel("Username:");
+            formPanel.add(usernameLabel, gbc);
 
-        // Email
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        JLabel emailLabel = new JLabel("Email:");
-        formPanel.add(emailLabel, gbc);
+            gbc.gridx = 1;
+            gbc.gridy = 1;
+            JLabel usernameValue = new JLabel(currentUser.getUsername());
+            usernameValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            formPanel.add(usernameValue, gbc);
 
-        gbc.gridx = 1;
-        gbc.gridy = 3;
-        JLabel emailValue = new JLabel(currentUser.getEmail());
-        emailValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        formPanel.add(emailValue, gbc);
+            // Full Name
+            gbc.gridx = 0;
+            gbc.gridy = 2;
+            JLabel nameLabel = new JLabel("Full Name:");
+            formPanel.add(nameLabel, gbc);
 
-        // User Type
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        JLabel typeLabel = new JLabel("User Type:");
-        formPanel.add(typeLabel, gbc);
+            gbc.gridx = 1;
+            gbc.gridy = 2;
+            JLabel nameValue = new JLabel(currentUser.getFullName());
+            nameValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            formPanel.add(nameValue, gbc);
 
-        gbc.gridx = 1;
-        gbc.gridy = 4;
-        JLabel typeValue = new JLabel(currentUser.getUserType().substring(0, 1).toUpperCase() +
-                currentUser.getUserType().substring(1));
-        typeValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        formPanel.add(typeValue, gbc);
+            // Email
+            gbc.gridx = 0;
+            gbc.gridy = 3;
+            JLabel emailLabel = new JLabel("Email:");
+            formPanel.add(emailLabel, gbc);
 
-        // Program Type
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        JLabel programLabel = new JLabel("Program Type:");
-        formPanel.add(programLabel, gbc);
+            gbc.gridx = 1;
+            gbc.gridy = 3;
+            JLabel emailValue = new JLabel(currentUser.getEmail());
+            emailValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            formPanel.add(emailValue, gbc);
 
-        gbc.gridx = 1;
-        gbc.gridy = 5;
-        JLabel programValue = new JLabel(currentUser.getProgramType().substring(0, 1).toUpperCase() +
-                currentUser.getProgramType().substring(1));
-        programValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        formPanel.add(programValue, gbc);
+            // User Type
+            gbc.gridx = 0;
+            gbc.gridy = 4;
+            JLabel typeLabel = new JLabel("User Type:");
+            formPanel.add(typeLabel, gbc);
 
-        // Change Password section
-        gbc.gridx = 0;
-        gbc.gridy = 7;
-        gbc.gridwidth = 2;
-        gbc.insets = new Insets(20, 8, 8, 8);
-        JLabel passwordSectionLabel = new JLabel("Change Password");
-        passwordSectionLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        formPanel.add(passwordSectionLabel, gbc);
+            gbc.gridx = 1;
+            gbc.gridy = 4;
+            JLabel typeValue = new JLabel(currentUser.getUserType().substring(0, 1).toUpperCase() +
+                    currentUser.getUserType().substring(1));
+            typeValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            formPanel.add(typeValue, gbc);
 
-        gbc.insets = new Insets(8, 8, 8, 8);
+            // Program Type
+            gbc.gridx = 0;
+            gbc.gridy = 5;
+            JLabel programLabel = new JLabel("Program Type:");
+            formPanel.add(programLabel, gbc);
 
-        // Current Password
-        gbc.gridx = 0;
-        gbc.gridy = 8;
-        gbc.gridwidth = 1;
-        JLabel currentPasswordLabel = new JLabel("Current Password:");
-        formPanel.add(currentPasswordLabel, gbc);
+            gbc.gridx = 1;
+            gbc.gridy = 5;
+            JLabel programValue = new JLabel(currentUser.getProgramType().substring(0, 1).toUpperCase() +
+                    currentUser.getProgramType().substring(1));
+            programValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            formPanel.add(programValue, gbc);
 
-        gbc.gridx = 1;
-        gbc.gridy = 8;
-        JPasswordField currentPasswordField = new JPasswordField(15);
-        UIUtils.styleTextField(currentPasswordField);
-        formPanel.add(currentPasswordField, gbc);
+            // Change Password section
+            gbc.gridx = 0;
+            gbc.gridy = 7;
+            gbc.gridwidth = 2;
+            gbc.insets = new Insets(20, 8, 8, 8);
+            JLabel passwordSectionLabel = new JLabel("Change Password");
+            passwordSectionLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            formPanel.add(passwordSectionLabel, gbc);
 
-        // New Password
-        gbc.gridx = 0;
-        gbc.gridy = 9;
-        JLabel newPasswordLabel = new JLabel("New Password:");
-        formPanel.add(newPasswordLabel, gbc);
+            gbc.insets = new Insets(8, 8, 8, 8);
 
-        gbc.gridx = 1;
-        gbc.gridy = 9;
-        JPasswordField newPasswordField = new JPasswordField(15);
-        UIUtils.styleTextField(newPasswordField);
-        formPanel.add(newPasswordField, gbc);
+            // Current Password
+            gbc.gridx = 0;
+            gbc.gridy = 8;
+            gbc.gridwidth = 1;
+            JLabel currentPasswordLabel = new JLabel("Current Password:");
+            formPanel.add(currentPasswordLabel, gbc);
 
-        // Confirm New Password
-        gbc.gridx = 0;
-        gbc.gridy = 10;
-        JLabel confirmPasswordLabel = new JLabel("Confirm New Password:");
-        formPanel.add(confirmPasswordLabel, gbc);
+            gbc.gridx = 1;
+            gbc.gridy = 8;
+            JPasswordField currentPasswordField = new JPasswordField(15);
+            UIUtils.styleTextField(currentPasswordField);
+            formPanel.add(currentPasswordField, gbc);
 
-        gbc.gridx = 1;
-        gbc.gridy = 10;
-        JPasswordField confirmPasswordField = new JPasswordField(15);
-        UIUtils.styleTextField(confirmPasswordField);
-        formPanel.add(confirmPasswordField, gbc);
+            // New Password
+            gbc.gridx = 0;
+            gbc.gridy = 9;
+            JLabel newPasswordLabel = new JLabel("New Password:");
+            formPanel.add(newPasswordLabel, gbc);
 
-        // Update Button
-        gbc.gridx = 1;
-        gbc.gridy = 11;
-        gbc.anchor = GridBagConstraints.EAST;
-        JButton updateButton = new JButton("Update Password");
-        UIUtils.styleButton(updateButton, ColorScheme.PRIMARY);
-        formPanel.add(updateButton, gbc);
+            gbc.gridx = 1;
+            gbc.gridy = 9;
+            JPasswordField newPasswordField = new JPasswordField(15);
+            UIUtils.styleTextField(newPasswordField);
+            formPanel.add(newPasswordField, gbc);
 
-        panel.add(titleLabel, BorderLayout.NORTH);
-        panel.add(formPanel, BorderLayout.CENTER);
+            // Confirm New Password
+            gbc.gridx = 0;
+            gbc.gridy = 10;
+            JLabel confirmPasswordLabel = new JLabel("Confirm New Password:");
+            formPanel.add(confirmPasswordLabel, gbc);
 
-        return panel;
-    }
+            gbc.gridx = 1;
+            gbc.gridy = 10;
+            JPasswordField confirmPasswordField = new JPasswordField(15);
+            UIUtils.styleTextField(confirmPasswordField);
+            formPanel.add(confirmPasswordField, gbc);
 
-    private void logout() {
-        int option = JOptionPane.showConfirmDialog(
-                this,
-                "Are you sure you want to logout?",
-                "Confirm Logout",
-                JOptionPane.YES_NO_OPTION);
+            // Update Button
+            gbc.gridx = 1;
+            gbc.gridy = 11;
+            gbc.anchor = GridBagConstraints.EAST;
+            JButton updateButton = new JButton("Update Password");
+            UIUtils.styleButton(updateButton, ColorScheme.PRIMARY);
+            formPanel.add(updateButton, gbc);
 
-        if (option == JOptionPane.YES_OPTION) {
-            this.dispose();
-            LoginFrame loginFrame = new LoginFrame();
-            loginFrame.setVisible(true);
+            panel.add(titleLabel, BorderLayout.NORTH);
+            panel.add(formPanel, BorderLayout.CENTER);
+
+            return panel;
+        }
+
+        private void logout() {
+            int option = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to logout?",
+                    "Confirm Logout",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (option == JOptionPane.YES_OPTION) {
+                this.dispose();
+                LoginFrame loginFrame = new LoginFrame();
+                loginFrame.setVisible(true);
+            }
+        }
+
+        private void updateRoomLabel() {
+            String assignedRoom = currentUser.getAssignedRoom();
+            roomLabel.setText(
+                    assignedRoom != null && !assignedRoom.isEmpty() ? "Room: " + assignedRoom : "No Room Assigned");
+        }
+
+        // Add this method to refresh the dashboard
+        public void refreshDashboard() {
+            // Refresh room label
+            updateRoomLabel();
+
+            // Refresh calendar with new room filter
+            if (calendarPanel != null) {
+                calendarPanel.setRoomFilter(currentUser.getAssignedRoom());
+                calendarPanel.refreshCalendar();
+            }
         }
     }
-
-    private void updateRoomLabel() {
-        String assignedRoom = currentUser.getAssignedRoom();
-        roomLabel.setText(
-                assignedRoom != null && !assignedRoom.isEmpty() ? "Room: " + assignedRoom : "No Room Assigned");
-    }
-
-    // Add this method to refresh the dashboard
-    public void refreshDashboard() {
-        // Refresh room label
-        updateRoomLabel();
-
-        // Refresh calendar with new room filter
-        if (calendarPanel != null) {
-            calendarPanel.setRoomFilter(currentUser.getAssignedRoom());
-            calendarPanel.refreshCalendar();
-        }
-    }
-}
