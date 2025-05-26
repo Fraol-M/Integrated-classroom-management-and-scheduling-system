@@ -1,0 +1,13 @@
+com\classroom\dao\EnrollmentDAO.class
+com\classroom\model\ScheduleResource.class
+com\classroom\ui\ScheduleDialog.class
+com\classroom\ui\CourseDialog.class
+com\classroom\model\Schedule.class
+com\classroom\dao\CourseDAO.class
+com\classroom\model\Course.class
+com\classroom\ui\LoginFrame.class
+com\classroom\ui\ScheduleDialog$1.class
+com\classroom\dao\ScheduleDAO.class
+com\classroom\util\DatabaseUtil.class
+com\classroom\model\Resource.class
+com\classroom\model\User.class
