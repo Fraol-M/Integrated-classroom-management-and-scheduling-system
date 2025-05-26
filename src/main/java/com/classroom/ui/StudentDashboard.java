@@ -3,7 +3,9 @@ package com.classroom.ui;
 // Add these imports at the top of the file
 import com.classroom.model.User;
 import com.classroom.model.Course;
+import com.classroom.model.MakeupRequest;
 import com.classroom.dao.CourseDAO;
+import com.classroom.dao.MakeupRequestDAO;
 import com.classroom.util.DatabaseUtil;
 
 import java.sql.Connection;
@@ -80,45 +82,81 @@ public class StudentDashboard extends JFrame {
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Header
+        // Header with icon
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        headerPanel.setBackground(Color.WHITE);
         JLabel titleLabel = new JLabel("Submit Makeup Class Request");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        titleLabel.setForeground(ColorScheme.PRIMARY);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setForeground(new Color(51, 153, 255));
+        headerPanel.add(titleLabel);
 
-        // Form Panel
+        // Form Panel with modern styling
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(230, 230, 230), 1),
+            BorderFactory.createEmptyBorder(25, 25, 25, 25)
+        ));
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Section Field (auto-populated)
-        JLabel sectionLabel = new JLabel("Section:");
-        JTextField sectionField = new JTextField(20);
+        // Section Field with modern styling
+        JLabel sectionLabel = new JLabel("Section");
+        sectionLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JTextField sectionField = new JTextField();
         sectionField.setEditable(false);
+        sectionField.setPreferredSize(new Dimension(300, 35));
+        sectionField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+
         if (currentUser.getAssignedRoom() != null && !currentUser.getAssignedRoom().isEmpty()) {
             sectionField.setText(currentUser.getAssignedRoom());
+            sectionField.setForeground(new Color(0, 100, 0));
         } else {
-            sectionField.setText("Please join a room or ask coordinator");
-            sectionField.setForeground(Color.RED);
+            sectionField.setText("Please join a room or ask a coordinator");
+            sectionField.setForeground(Color.GRAY);
         }
-    
-        // Course Selection
-        JLabel courseLabel = new JLabel("Course:");
+
+        // Course Selection with custom styling
+        JLabel courseLabel = new JLabel("Course");
+        courseLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         JComboBox<String> courseCombo = new JComboBox<>();
+        courseCombo.setPreferredSize(new Dimension(300, 35));
+        courseCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        courseCombo.setBackground(Color.WHITE);
+        courseCombo.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+
         List<Course> enrolledCourses = CourseDAO.getCoursesByStudentId(currentUser.getUserId());
         for (Course course : enrolledCourses) {
-            courseCombo.addItem(course.getCourseCode());
+            courseCombo.addItem(course.getCourseCode() + " - " + course.getCourseName());
         }
-    
-        // Class Representative Checkbox
+
+        // Class Representative Checkbox with modern styling
         JCheckBox classRepCheckBox = new JCheckBox("I am the class representative");
-    
-        // Submit Button
+        classRepCheckBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        classRepCheckBox.setBackground(Color.WHITE);
+        classRepCheckBox.setFocusPainted(false);
+
+        // Submit Button with gradient effect
         JButton submitButton = new JButton("Submit Request");
-        UIUtils.styleButton(submitButton, ColorScheme.PRIMARY);
+        submitButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        submitButton.setForeground(Color.WHITE);
+        submitButton.setBackground(new Color(51, 153, 255));
+        submitButton.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
+        submitButton.setFocusPainted(false);
+        submitButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Add action listener to submit button
         submitButton.addActionListener(e -> {
             if (!classRepCheckBox.isSelected()) {
                 JOptionPane.showMessageDialog(this,
@@ -126,18 +164,17 @@ public class StudentDashboard extends JFrame {
                     "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-    
+
             if (currentUser.getAssignedRoom() == null || currentUser.getAssignedRoom().isEmpty()) {
                 JOptionPane.showMessageDialog(this,
                     "Please join a room or contact coordinator first",
                     "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-    
-            String selectedCourse = (String) courseCombo.getSelectedItem();
-            // Get teacher ID for the selected course
+
+            String selectedCourse = ((String) courseCombo.getSelectedItem()).split(" - ")[0];
             int teacherId = CourseDAO.getTeacherIdByCourseCode(selectedCourse);
-    
+
             MakeupRequest request = new MakeupRequest(
                 currentUser.getUserId(),
                 selectedCourse,
@@ -145,7 +182,7 @@ public class StudentDashboard extends JFrame {
                 teacherId,
                 true
             );
-    
+
             if (MakeupRequestDAO.createRequest(request)) {
                 JOptionPane.showMessageDialog(this,
                     "Makeup request submitted successfully",
@@ -156,30 +193,32 @@ public class StudentDashboard extends JFrame {
                     "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
-    
-        // Add components to form panel
+
+        // Add components with proper spacing
         formPanel.add(sectionLabel, gbc);
-        gbc.gridx = 1;
+        gbc.gridy++;
         formPanel.add(sectionField, gbc);
-    
-        gbc.gridx = 0;
+
         gbc.gridy++;
+        gbc.insets = new Insets(20, 10, 10, 10);
         formPanel.add(courseLabel, gbc);
-        gbc.gridx = 1;
+
+        gbc.gridy++;
+        gbc.insets = new Insets(10, 10, 10, 10);
         formPanel.add(courseCombo, gbc);
-    
-        gbc.gridx = 0;
+
         gbc.gridy++;
-        gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 10, 20, 10);
         formPanel.add(classRepCheckBox, gbc);
-    
+
         gbc.gridy++;
+        gbc.anchor = GridBagConstraints.CENTER;
         formPanel.add(submitButton, gbc);
-    
+
         // Add components to main panel
-        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(headerPanel, BorderLayout.NORTH);
         panel.add(formPanel, BorderLayout.CENTER);
-    
+
         return panel;
     }
 
@@ -498,6 +537,16 @@ public class StudentDashboard extends JFrame {
         String assignedRoom = currentUser.getAssignedRoom();
         roomLabel.setText(
                 assignedRoom != null && !assignedRoom.isEmpty() ? "Room: " + assignedRoom : "No Room Assigned");
+    }
+
+    private JPanel createHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(ColorScheme.HEADER_BACKGROUND);
+        JLabel roomInfoLabel = new JLabel("Room Information");
+        roomInfoLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        roomInfoLabel.setForeground(ColorScheme.HEADER_TEXT);
+        headerPanel.add(roomInfoLabel, BorderLayout.WEST);
+        return headerPanel;
     }
 
     // Add this method to refresh the dashboard

@@ -31,4 +31,7 @@ public class ColorScheme {
     public static final Color TEXT_PRIMARY = new Color(33, 33, 33);
     public static final Color TEXT_SECONDARY = new Color(117, 117, 117);
     public static final Color TEXT_DISABLED = new Color(189, 189, 189);
+    
+    public static final Color HEADER_BACKGROUND = new Color(240, 240, 240); // Example color
+    public static final Color HEADER_TEXT = new Color(0, 0, 0); // Example color
 }
